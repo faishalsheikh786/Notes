@@ -143,6 +143,16 @@ docker
 docker -v
 ```
 
+### Pull image
+Download the latest version of an image
+```bash
+docker pull <image>      
+```
+Download a specific version of an image
+```bash
+docker pull <image>:<tag>      
+```
+
 ---
 
 ### 🏗️ Build Image
@@ -157,12 +167,10 @@ docker build -t my-app .
 ---
 
 ### 🚀 Run Container Using Existing Image
+If the image isn’t already downloaded, Docker automatically pulls it first, then creates a container from it, and finally runs that container.
 ```bash
 docker run <image-name>
-```
-Example:
-```bash
-docker run ubuntu
+docker run --name <container-name> <image-name>
 ```
 
 Run interactively:
@@ -295,6 +303,10 @@ services:
 | `docker -v` | Check Docker version |
 | `docker image ls` | List all downloaded images |
 | `docker build -t <image-name> <path>` | Build an image from a Dockerfile |
+| `docker pull <image-name>` | Download lattest image |
+| `docker pull <image-name>:<tag>` | Download image with version |
+| `docker run <image>` | If the image isn’t already downloaded, Docker automatically pulls it first, then creates a container from it, and finally runs that container. |
+| `docker run --name <container-name> <image-name>` | Run container with given name |
 | `docker run -it <image>` | Run an image interactively (downloads if not present) |
 | `docker run -p <host-port>:<container-port> <image>` | Map container port to host |
 | `docker run -e key=value` | Pass environment variables to a container |
