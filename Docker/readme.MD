@@ -290,19 +290,28 @@ services:
 ## 🧠 Summary Table
 
 | Command | Description |
-|----------|-------------|
-| `docker build -t <image> .` | Build image from Dockerfile |
-| `docker run <image>` | Run container |
-| `docker ps` | List running containers |
-| `docker ps -a` | List all containers |
-| `docker images` | List all images |
-| `docker start/stop <name>` | Start/Stop container |
-| `docker exec -it <name> bash` | Access container shell |
-| `docker rm <id>` | Delete container |
-| `docker rmi <id>` | Delete image |
-| `docker system prune -a` | Clean everything |
-| `docker compose up` | Start multi-container app |
-| `docker compose down` | Stop multi-container app |
+|----------|--------------|
+| `docker` | Check if Docker is installed |
+| `docker -v` | Check Docker version |
+| `docker image ls` | List all downloaded images |
+| `docker build -t <image-name> <path>` | Build an image from a Dockerfile |
+| `docker run -it <image>` | Run an image interactively (downloads if not present) |
+| `docker run -p <host-port>:<container-port> <image>` | Map container port to host |
+| `docker run -e key=value` | Pass environment variables to a container |
+| `docker container ls` | List only running containers |
+| `docker container ls -a` | List all containers (including stopped) |
+| `docker start <container>` | Start a stopped container |
+| `docker stop <container>` | Stop a running container |
+| `docker exec -it <container> bash` | Open an interactive shell in a running container |
+| `docker compose up` | Start all services defined in `docker-compose.yml` |
+| `docker compose up -d` | Start services in detached mode |
+| `docker compose down` | Stop and remove all services |
+| `docker rm <container-id>` | Remove a stopped container |
+| `docker rm -f <container-id>` | Force remove a running container |
+| `docker container prune` | Remove all stopped containers |
+| `docker rmi <image-id>` | Remove a specific image |
+| `docker rmi -f <image-id>` | Force remove an image even if used by containers |
+| `docker image prune` | Remove unused (dangling) images |
 
 ---
 
