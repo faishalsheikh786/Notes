@@ -361,11 +361,11 @@ Both files simplify choosing connections, but neither file alone grants access. 
 
 ## 13. Illustrated guide and command walkthrough
 
-![EKS kubeconfig lookup, connection, authentication, and authorization](images/kube-config.png)
+![EKS kubeconfig lookup, connection, authentication, and authorization](../images/kube-config.png)
 
 **Kubeconfig diagram:** Read it from left to right. The file's `current-context` chooses a context, which links a cluster entry and a user entry. `kubectl` uses the cluster's API URL and CA to reach and verify EKS, then runs the user entry's AWS token command. EKS identifies the AWS principal and checks permission for the requested action. The diagram's endpoint, CA, names, output, and host details are illustrative; the YAML shown there is conceptual rather than a complete file to paste. Detailed explanations and working syntax follow in Part A.
 
-![SSH key creation, host aliases, first connection, and Git commands](images/git-ssh.png)
+![SSH key creation, host aliases, first connection, and Git commands](../images/git-ssh.png)
 
 **SSH diagram:** Read it from left to right. Create a key pair, register its `.pub` file with the service, use `~/.ssh/config` to select the destination and private key, verify the server's host key on first contact, and then run SSH or Git commands using the alias. The host-key fingerprint and IP displayed in the illustration are examples, **not values to trust or connect to**. Compare a real fingerprint with the provider's official published fingerprint. The commands and fuller explanations follow in Part B.
 
