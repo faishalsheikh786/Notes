@@ -209,6 +209,10 @@ Host gitlab.com
 
 Other useful directives include `Port 22` (remote SSH port), `ProxyJump bastion-alias` (connect through a jump host), `ServerAliveInterval 30` (send keepalive requests), and `ForwardAgent` (agent forwarding; enable only where specifically needed). A broad `Host *` block can set defaults. SSH config is not YAML; write `Host example`, not `Host: example`.
 
+### Why `HostName gitlab.com` has `User git`
+
+`HostName` is **where** SSH connects. `User` is **the login name requested on that server**. GitLab and GitHub normally provide a shared SSH login named `git` for Git operations. Your personal account name is determined from the public key you registered with the service. Thus `ssh gitlab.com` with the rule above is effectively `ssh git@gitlab.com`; it does not log in to an account named `gitlab-username` on the server. The repository URL uses `gitlab-username` as a repository namespace, for example `git@gitlab.com:gitlab-username/my-repo.git`. If a group owns the repository, its group path replaces that namespace. The service then checks that the account associated with your key has repository access.
+
 ## 8. Host aliases and account usernames
 
 Assume your GitHub account is `github-username`, your GitLab account is `gitlab-username`, and their respective public keys have been added to those accounts. You can use readable aliases:
@@ -277,17 +281,39 @@ git remote set-url origin git@github-work:github-username/my-repo.git
 | `Port` | Yes | Must match the remote server's listening port. |
 | Directive names | No | `HostName`, `IdentityFile`, etc. are SSH's syntax. |
 
-An EC2 host is a different example: `User ec2-user` may be correct for an Amazon Linux instance, and `IdentityFile` might point to `~/.ssh/ansible-lab`. The remote user depends on the AMI and server setup:
+An EC2 host is different: its `User` is an actual operating-system account, such as `ec2-user` on many Amazon Linux instances or `ubuntu` on many Ubuntu instances. A downloaded `.pem` file is often the private key from an EC2 key pair. SSH accepts the `.pem` extension directly; use its actual path in `IdentityFile`. For example:
 
 ```sshconfig
-Host ansible-lab-ec2
+Host my-ec2
     HostName 203.0.113.10
     User ec2-user
-    IdentityFile ~/.ssh/ansible-lab
+    Port 22
+    IdentityFile ~/.ssh/my-ec2-key.pem
     IdentitiesOnly yes
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
 ```
 
-Then use `ssh ansible-lab-ec2`. The example IP is documentation-only and must be replaced with your real public or reachable private IP. EC2 network access, security groups, server-side account, and authorized public key must also be correct.
+The IP is documentation-only: replace it with your reachable public or private IP/DNS name. Save the private `.pem` file at the stated path and restrict it with `chmod 400 ~/.ssh/my-ec2-key.pem`; then connect with `ssh my-ec2`. If the key remains in Downloads, you may instead use `IdentityFile ~/Downloads/my-ec2-key.pem` and set permissions there. Do not use a `.pub` file as `IdentityFile`. `ServerAliveInterval 30` checks an idle connection every 30 seconds, and `ServerAliveCountMax 3` disconnects after three unanswered checks. EC2 security-group/network access, the server-side login account, and the matching authorized public key must also be correct.
+
+For a private instance reached through a bastion, add two host blocks:
+
+```sshconfig
+Host bastion
+    HostName BASTION_PUBLIC_IP
+    User ec2-user
+    IdentityFile ~/.ssh/bastion.pem
+    IdentitiesOnly yes
+
+Host private-ec2
+    HostName PRIVATE_EC2_IP
+    User ec2-user
+    IdentityFile ~/.ssh/private-ec2.pem
+    IdentitiesOnly yes
+    ProxyJump bastion
+```
+
+`ssh private-ec2` connects through `bastion`. Replace the placeholders with actual addresses and use whichever key is authorized on each host. To see the effective connection settings before connecting, run `ssh -G my-ec2 | grep -E '^(hostname|user|port|identityfile|proxyjump|serveraliveinterval) '`.
 
 ## 10. SSH authentication and server verification
 
