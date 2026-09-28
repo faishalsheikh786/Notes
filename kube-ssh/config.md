@@ -358,3 +358,70 @@ Apply permissions only to files that actually exist. Never disable host key chec
 | Choose default | `current-context` | The destination in your `ssh` command or Git remote URL |
 
 Both files simplify choosing connections, but neither file alone grants access. Always verify the selected target before running a command that changes resources.
+
+## 13. Illustrated guide and command walkthrough
+
+![EKS kubeconfig lookup, connection, authentication, and authorization](images/kube-config.png)
+
+**Kubeconfig diagram:** Read it from left to right. The file's `current-context` chooses a context, which links a cluster entry and a user entry. `kubectl` uses the cluster's API URL and CA to reach and verify EKS, then runs the user entry's AWS token command. EKS identifies the AWS principal and checks permission for the requested action. The diagram's endpoint, CA, names, output, and host details are illustrative; the YAML shown there is conceptual rather than a complete file to paste. Detailed explanations and working syntax follow in Part A.
+
+![SSH key creation, host aliases, first connection, and Git commands](images/git-ssh.png)
+
+**SSH diagram:** Read it from left to right. Create a key pair, register its `.pub` file with the service, use `~/.ssh/config` to select the destination and private key, verify the server's host key on first contact, and then run SSH or Git commands using the alias. The host-key fingerprint and IP displayed in the illustration are examples, **not values to trust or connect to**. Compare a real fingerprint with the provider's official published fingerprint. The commands and fuller explanations follow in Part B.
+
+If you downloaded only this Markdown file, download the two images into an `images/` directory next to it, or use the accompanying ZIP, so the illustrations render locally.
+
+
+### Reading the kubeconfig picture, panel by panel
+
+1. **Config:** `clusters[].name`, `users[].name`, and `contexts[].name` are local lookup names. A context's `cluster:` and `user:` fields point to those entries. `current-context` points to the chosen context. A kubeconfig user name is not your AWS username.
+2. **Command:** `kubectl get pods` normally uses `current-context`; `kubectl get pods --context qa` selects `qa` for only that command. The picture shows four environment labels, but each works only when real connection and auth entries have been configured.
+3. **Secure connection:** The API server URL tells the client where to send the HTTPS request. The CA verifies the API server's TLS certificate. It does not prove who the client is.
+4. **Authentication:** The exec user entry calls `aws eks get-token` for the selected EKS cluster. The AWS CLI chooses credentials from its effective configuration, which may include a profile, environment variables, or SSO. `kubectl` presents the short-lived token, and EKS identifies the underlying IAM principal. The diagram shows a conceptual command layout; use the actual `exec.args` array in the YAML example above.
+5. **Authorization:** Access entries or the legacy `aws-auth` mapping connect an IAM principal with cluster access. EKS access policies and/or Kubernetes RBAC evaluate the specific verb, resource, and namespace, such as `list pods` in `default`. Allowed requests return pods; a valid identity without that permission receives `Forbidden`.
+
+The commands along the bottom of the picture inspect contexts, switch the local default, show the AWS CLI identity, and ask the cluster whether the selected identity can list pods. They do not themselves grant access.
+
+
+### Reading the SSH picture, panel by panel
+
+1. **Create a key pair:** `ssh-keygen -t ed25519 -C "my-mac" -f ~/.ssh/github_personal` creates `github_personal` (private) and `github_personal.pub` (public). The comment is a label, not the GitHub account name. If your existing `id_ed25519` pair is already registered and working, you do not need to generate a replacement. `pbcopy < ~/.ssh/github_personal.pub` copies only the public key on macOS. In GitHub, add it under **Settings → SSH and GPG keys → New SSH key** as an authentication key.
+2. **Choose a host:** Separate `Host` aliases can point to the same `HostName github.com` while selecting different `IdentityFile` keys for personal and work accounts. Another alias can point to GitLab, and `app-dev` can point to an EC2 server using a `.pem` private key. `User git` is the Git hosting SSH service login; the registered key selects your account. For EC2, `User ec2-user` is an operating-system login. `IdentitiesOnly yes` reduces attempts with unrelated keys.
+3. **Connect and verify:** The first SSH connection may display the server's host-key fingerprint. Check the real fingerprint against the provider's official documentation before accepting it. The trusted server host key is then recorded in `~/.ssh/known_hosts`. Your client proves possession of the private key without sending the private key. The server maps your public key to the Git account or an authorized server login. The fingerprint printed in the picture is only illustrative.
+4. **Use commands:** `ssh -T git@github-personal` tests GitHub authentication; `ssh app-dev` logs in to the configured server. A Git URL such as `git@github-work:org/repo.git` uses `github-work` as the host alias and `org/repo.git` as the repository path. `ssh -G app-dev` prints resolved connection settings, `ssh-add -l` lists agent-loaded keys, and `chmod 400 ~/.ssh/dev.pem` restricts that private key's permissions.
+
+The diagram's four sample host blocks are separate choices, not four accounts automatically created by SSH. The corresponding public keys must be registered with the proper Git accounts or authorized on the proper server, and the actual remote permissions still apply.
+
+
+### Commands in the pictures, ready to adapt
+
+**Kubernetes (your EKS workflow):**
+
+```bash
+kubectl config get-contexts                 # List configured contexts
+kubectl config current-context             # Show selected context
+kubectl config use-context dev              # Select an existing context named dev
+kubectl get pods -n default                 # Query the selected cluster
+kubectl get pods --context qa -n default    # Use qa for this command only
+aws sts get-caller-identity                 # Show effective AWS CLI identity
+kubectl auth can-i list pods -n default     # Ask whether list pods is allowed
+```
+
+The `dev` and `qa` context names are examples. Use names returned by `kubectl config get-contexts`; the AWS identity command must use the same AWS profile/environment as the kubeconfig exec command to describe that command's actual identity.
+
+**SSH key generation, registration, and connection on macOS:**
+
+```bash
+ssh-keygen -t ed25519 -C "my-mac" -f ~/.ssh/github_personal
+pbcopy < ~/.ssh/github_personal.pub       # Paste into GitHub's SSH key settings
+ssh -T git@github-personal                  # Test the matching Host alias
+ssh -T git@github-work                      # Test another GitHub key/account
+ssh -T git@gitlab-work                      # Test GitLab key/account
+git clone git@github-personal:username/repo.git
+ssh app-dev                                 # Log in to configured EC2 host
+ssh -G app-dev                              # Display resolved SSH options
+ssh-add -l                                  # List loaded agent keys
+chmod 400 ~/.ssh/dev.pem                    # Restrict EC2 private key
+```
+
+Before using the alias commands, create matching `Host` blocks in `~/.ssh/config` and register each corresponding public key with the intended service/account. If you already have a working key pair, reuse it instead of overwriting it. For the first connection to a host, compare the displayed host-key fingerprint with the provider's published value before accepting it. The illustrative IP and fingerprint in the pictures must not be used as real connection data.
